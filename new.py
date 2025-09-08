@@ -17,13 +17,22 @@ def load_data():
     df = pd.read_csv("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/RHoMIS_Indicators.csv", encoding="latin1")  # 👈 adjust path
     return df
 
+# @st.cache_resource
+# def load_model():
+#     model = joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_rf (1).pkl")  # 👈 adjust path
+#     return model
+
 @st.cache_resource
-def load_model():
-    model = joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_small_rf.pkl")  # 👈 adjust path
-    return model
+def load_models():
+    models = {
+        "Random Forest": joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_small_rf (2).pkl"),
+        "XGBoost": joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_small_xgb.pkl"),
+        "LightGBM": joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_small_lgbm.pkl")
+    }
+    return models
 
 df = load_data()
-model = load_model()
+model = load_models()
 
 # ==========================
 # APP HEADER
@@ -35,6 +44,10 @@ st.markdown("Predict **household food security status** using RHOMIS indicators.
 # SIDEBAR NAVIGATION
 # ==========================
 menu = st.sidebar.radio("📌 Navigation", ["Dataset Overview", "Model Performance", "Feature Importance", "Prediction Tool", "Recommendations"])
+
+models = load_models()
+selected_model_name = st.sidebar.selectbox("🤖 Choose Model", list(models.keys()))
+model = models[selected_model_name]
 
 # ==========================
 # 1. DATASET OVERVIEW
@@ -230,32 +243,68 @@ elif menu == "Recommendations":
 elif menu == "Model Performance":
     st.header("📈 Model Performance")
 
-    # From your evaluation
-    metrics = {
-        "Accuracy": 0.83,
-        "Macro F1-score": 0.80,
-        "ROC AUC": 0.91,
-        "Precision (avg)": 0.82,
-        "Recall (avg)": 0.79
+    # Store evaluation results for each model
+    model_metrics = {
+        "Random Forest": {
+            "Accuracy": 0.80,
+            "Macro F1-score": 0.80,
+            "ROC AUC": 0.91,
+            "Precision (avg)": 0.82,
+            "Recall (avg)": 0.79
+        },
+        "LightGBM": {
+            "Accuracy": 0.81,
+            "Macro F1-score": 0.78,
+            "ROC AUC": 0.87,
+            "Precision (avg)": 0.80,
+            "Recall (avg)": 0.77
+        },
+        "XGBoost": {
+            "Accuracy": 0.82,
+            "Macro F1-score": 0.79,
+            "ROC AUC": 0.87,
+            "Precision (avg)": 0.81,
+            "Recall (avg)": 0.78
+        },
     }
 
+    # Get metrics for selected model
+    metrics = model_metrics[selected_model_name]
+
+    # Gauge plot for Accuracy
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=metrics["Accuracy"] * 100,
-        title={'text': "Model Accuracy (%)"},
+        title={'text': f"{selected_model_name} Accuracy (%)"},
         gauge={'axis': {'range': [0, 100]}}
     ))
     st.plotly_chart(fig, use_container_width=True)
 
+    # Show metrics in JSON format
     st.write("### 📊 Evaluation Report")
     st.json(metrics)
 
 # ==========================
 # 3. FEATURE IMPORTANCE
 # ==========================
-elif menu == "Feature Importance":
-    st.header("🔑 Feature Importance (Random Forest)")
+# elif menu == "Feature Importance":
+#     st.header("🔑 Feature Importance (Random Forest)")
+    
+#     importances = model.named_steps['classifier'].feature_importances_
+#     features = model.named_steps['preprocessor'].get_feature_names_out()
 
+#     fi = pd.DataFrame({
+#         "Feature": features,
+#         "Importance": importances
+#     }).sort_values(by="Importance", ascending=False).head(20)
+
+#     fig = px.bar(fi, x="Importance", y="Feature", orientation="h", title="Top 20 Important Features")
+#     st.plotly_chart(fig, use_container_width=True)
+#     st.dataframe(fi) 
+
+elif menu == "Feature Importance":
+
+    # Extract feature importances
     importances = model.named_steps['classifier'].feature_importances_
     features = model.named_steps['preprocessor'].get_feature_names_out()
 
@@ -264,9 +313,13 @@ elif menu == "Feature Importance":
         "Importance": importances
     }).sort_values(by="Importance", ascending=False).head(20)
 
-    fig = px.bar(fi, x="Importance", y="Feature", orientation="h", title="Top 20 Important Features")
+    # --- Display results ---
+    st.subheader(f"📊 {selected_model_name}")
+    fig = px.bar(fi, x="Importance", y="Feature", orientation="h",
+                 title=f"Top 20 Important Features – {selected_model_name}")
     st.plotly_chart(fig, use_container_width=True)
     st.dataframe(fi)
+
 
 # ==========================
 # 4. PREDICTION TOOL
@@ -302,18 +355,18 @@ elif menu == "Prediction Tool":
     })
 
     # --- Predict ---
+
 if st.button("Predict Food Security"):
+    # Make sure your input_data has the right column names/order
     pred = model.predict(input_data)[0]
     proba = model.predict_proba(input_data).max() * 100
 
-    # Map numeric prediction to human-readable labels
     label_map = {0: "Insecure", 1: "Secure"}
     pred_label = label_map.get(pred, str(pred))
 
-    st.success(f"✅ Predicted Food Security: {pred_label}")
+    st.success(f"✅ Predicted Food Security ({selected_model_name}): {pred_label}")
     st.info(f"Confidence: {proba:.2f}%")
 
     # Download option
     csv = input_data.assign(Predicted_FoodSecurity=pred_label)
     st.download_button("📥 Download Prediction", csv.to_csv(index=False), "prediction.csv", "text/csv")
-
