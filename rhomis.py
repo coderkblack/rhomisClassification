@@ -337,18 +337,36 @@ elif menu == "Feature Importance":
 elif menu == "Prediction Tool":
     st.header("🧮 Make a Prediction")
 
-    # --- Input fields ---
+    # --- Input fields with refined inline descriptions ---
     HHsizeMAE = st.number_input("Household Size (MAE)", min_value=1, value=4)
+    st.caption("Household size expressed in Male Adult Equivalents (MAE), adjusting for age and consumption needs.")
+
     NrofMonthsFoodInsecure = st.number_input("Months Food Insecure", min_value=0, max_value=12, value=2)
+    st.caption("Number of months in the past year when the household experienced a shortage of food.")
+
     PPI_Likelihood = st.slider("PPI Likelihood", 0.0, 100.0, 50.0)
+    st.caption("Estimated probability (%) that the household will move out of poverty, based on the Poverty Probability Index (PPI).")
+
     Food_Self_Sufficiency = st.number_input("Food Self Sufficiency (kCal MAE/day)", min_value=0, value=2000)
-    LivestockHoldings = st.number_input("Livestock Holdings", min_value=0, value=5)
-    TVA_USD = st.number_input("TVA USD PPP pmae pday", min_value=0.0, value=1.5)
-    farm_income = st.number_input("Farm Income (USD PPP pHH Yr)", min_value=0.0, value=500.0)
-    total_income = st.number_input("Total Income (USD PPP pHH Yr)", min_value=0.0, value=1000.0)
+    st.caption("Daily kilocalories per Male Adult Equivalent (MAE) that were produced and consumed by the household itself.")
+
+    LivestockHoldings = st.number_input("Livestock Holdings (TLU)", min_value=0, value=5)
+    st.caption("Total livestock owned, converted into Tropical Livestock Units (TLU) for comparability across species.")
+
+    TVA_USD = st.number_input("TVA (USD PPP per MAE per day)", min_value=0.0, value=1.5)
+    st.caption("Total Value of all household activities in Purchasing Power Parity (PPP) USD per MAE per day. Reflects productivity and value generation.")
+
+    farm_income = st.number_input("Farm Income (USD PPP per HH per Yr)", min_value=0.0, value=500.0)
+    st.caption("Total annual income from farming activities (crop and livestock sales), adjusted to USD PPP.")
+
+    total_income = st.number_input("Total Income (USD PPP per HH per Yr)", min_value=0.0, value=1000.0)
+    st.caption("Annual household income from all sources (farm, livestock, and off-farm), in USD PPP.")
 
     Country = st.selectbox("Country", sorted(df["Country"].unique()))
+    st.caption("Full name of the country where the household was surveyed.")
+
     HouseholdType = st.selectbox("Household Type", df["HouseholdType"].unique())
+    st.caption("Type of household, categorized by marital status of the household head (e.g., single man, single woman, couple).")
 
     # --- Create input dataframe ---
     input_data = pd.DataFrame({
@@ -365,9 +383,7 @@ elif menu == "Prediction Tool":
     })
 
     # --- Predict ---
-
     if st.button("Predict Food Security"):
-        # Make sure your input_data has the right column names/order
         pred = model.predict(input_data)[0]
         proba = model.predict_proba(input_data).max() * 100
 
