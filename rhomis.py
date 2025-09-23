@@ -366,17 +366,17 @@ elif menu == "Prediction Tool":
 
     # --- Predict ---
 
-if st.button("Predict Food Security"):
-    # Make sure your input_data has the right column names/order
-    pred = model.predict(input_data)[0]
-    proba = model.predict_proba(input_data).max() * 100
+    if st.button("Predict Food Security"):
+        # Make sure your input_data has the right column names/order
+        pred = model.predict(input_data)[0]
+        proba = model.predict_proba(input_data).max() * 100
 
-    label_map = {0: "Insecure", 1: "Secure"}
-    pred_label = label_map.get(pred, str(pred))
+        label_map = {0: "Insecure", 1: "Secure"}
+        pred_label = label_map.get(pred, str(pred))
 
-    st.success(f"✅ Predicted Food Security ({selected_model_name}): {pred_label}")
-    st.info(f"Confidence: {proba:.2f}%")
+        st.success(f"✅ Predicted Food Security ({selected_model_name}): {pred_label}")
+        st.info(f"Confidence: {proba:.2f}%")
 
-    # Download option
-    csv = input_data.assign(Predicted_FoodSecurity=pred_label)
-    st.download_button("📥 Download Prediction", csv.to_csv(index=False), "prediction.csv", "text/csv")
+        # Download option
+        csv = input_data.assign(Predicted_FoodSecurity=pred_label)
+        st.download_button("📥 Download Prediction", csv.to_csv(index=False), "prediction.csv", "text/csv")
