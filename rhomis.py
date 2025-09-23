@@ -3,6 +3,8 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import plotly.graph_objects as go
+import requests
+from pathlib import Path
 
 # ==========================
 # PAGE CONFIG
@@ -24,15 +26,22 @@ def load_data():
 
 @st.cache_resource
 def load_models():
-    models = {
-        "Random Forest": joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_small_rf (2).pkl"),
-        "XGBoost": joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_small_xgb.pkl"),
-        "LightGBM": joblib.load("/home/jakes/Documents/strathmore/dataMining/project/Rhomis/final/rhomis_small_lgbm.pkl")
+    base_url = "https://huggingface.co/coderkblack/rhomis-model/resolve/main/"
+    model_files = {
+        "Random Forest": "rhomis_small_rf (2).pkl",
+        "XGBoost": "rhomis_small_xgb.pkl",
+        "LightGBM": "rhomis_small_lgbm.pkl"
     }
-    return models
 
-df = load_data()
-model = load_models()
+    models = {}
+    for name, filename in model_files.items():
+        local_path = Path(filename)
+        if not local_path.exists():  # Download if missing
+            url = base_url + filename
+            r = requests.get(url)
+            local_path.write_bytes(r.content)
+        models[name] = joblib.load(local_path)
+    return models
 
 # ==========================
 # APP HEADER
@@ -45,6 +54,7 @@ st.markdown("Predict **household food security status** using RHOMIS indicators.
 # ==========================
 menu = st.sidebar.radio("📌 Navigation", ["Dataset Overview", "Model Performance", "Feature Importance", "Prediction Tool", "Recommendations"])
 
+df = load_data()
 models = load_models()
 selected_model_name = st.sidebar.selectbox("🤖 Choose Model", list(models.keys()))
 model = models[selected_model_name]
