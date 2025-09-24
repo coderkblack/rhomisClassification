@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import requests
@@ -136,6 +137,30 @@ if menu == "Dataset Overview":
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    # 🗓️ Seasonal Food Security - Worst & Best Months
+    st.markdown("### 🗓️ Seasonal Food Security")
+    df_clean = df.replace({'WorstFoodSecMonth': 'na', 'BestFoodSecMonth': 'na'}, np.nan)
+    df_clean = df_clean.dropna(subset=['WorstFoodSecMonth', 'BestFoodSecMonth'])
+    # Create a DataFrame for "Worst" months and rename the column
+    worst_months_df = df_clean[['WorstFoodSecMonth']].assign(Season_Type='Worst').rename(columns={'WorstFoodSecMonth': 'Month'})
+
+    # Create a DataFrame for "Best" months and rename the column
+    best_months_df = df_clean[['BestFoodSecMonth']].assign(Season_Type='Best').rename(columns={'BestFoodSecMonth': 'Month'})
+
+    # Concatenate the two DataFrames with unique column names
+    seasonal_df = pd.concat([worst_months_df, best_months_df])
+
+    fig = px.histogram(
+        seasonal_df,
+        x="Month",
+        color="Season_Type",
+        barmode="group",
+        title="Distribution of Best and Worst Food Secure Months",
+        labels={"Month": "Month of the Year", "Season_Type": "Season Type"},
+        category_orders={"Month": ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]}
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
     # 🍽️ Months Food Insecure Distribution
     st.markdown("### 🍽️ Months Food Insecure Distribution")
     fig = px.violin(
@@ -174,78 +199,6 @@ if menu == "Dataset Overview":
     )
     fig.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig, use_container_width=True)
-
-elif menu == "Recommendations":
-    st.title("🌍 Recommendations for Most Affected Countries")
-
-    # Group data: % of severely food insecure households
-    country_status = df.groupby(["Country", "HFIAS_status"]).size().reset_index(name="count")
-    country_totals = df.groupby("Country").size().reset_index(name="total")
-    country_status = country_status.merge(country_totals, on="Country")
-    country_status["percentage"] = country_status["count"] / country_status["total"]
-
-    # Filter only SeverelyFI
-    severe_df = country_status[country_status["HFIAS_status"] == "SeverelyFI"]
-    severe_df = severe_df.sort_values("percentage", ascending=False)
-
-    # Show top affected countries
-    st.markdown("### 🚨 Top 5 Most Affected Countries (Severely Food Insecure)")
-    top5 = severe_df.head(5)
-
-    fig = px.bar(
-        top5,
-        x="Country",
-        y="percentage",
-        title="Top 5 Severely Food Insecure Countries",
-        text=top5["percentage"].apply(lambda x: f"{x:.1%}"),
-        color="percentage",
-        color_continuous_scale="Reds"
-    )
-    fig.update_traces(textposition="outside")
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Provide recommendations
-    st.markdown("### 📝 Country-Specific Recommendations")
-
-    for _, row in top5.iterrows():
-        country = row["Country"]
-        perc = row["percentage"]
-        # Country to flag emoji mapping
-        country_flags = {
-            "Ghana": "🇬🇭",
-            "Burundi": "🇧🇮",
-            "Kenya": "🇰🇪",
-            "Malawi": "🇲🇼",
-            "Zambia": "🇿🇲",
-        }
-        st.subheader(f"{country_flags.get(country, '')} {country} – {perc:.1%} severely food insecure")
-
-        if perc > 0.40:
-            st.warning(f"**{country} faces extreme food insecurity.**")
-            st.write("- Scale up immediate food aid and safety net programs.")
-            st.write("- Strengthen climate resilience measures (e.g., irrigation, drought-resistant crops).")
-            st.write("- Enhance market access and reduce post-harvest losses.")
-        elif perc > 0.25:
-            st.info(f"**{country} is moderately affected.**")
-            st.write("- Support farm diversification (crops + livestock).")
-            st.write("- Increase household income opportunities (off-farm work, skills training).")
-            st.write("- Expand access to affordable credit and inputs.")
-        else:
-            st.success(f"**{country} is relatively stable but at risk.**")
-            st.write("- Continue monitoring food security trends.")
-            st.write("- Strengthen local extension services.")
-            st.write("- Promote nutrition education and storage technologies.")
-
-    # Optional: Let users select a country for custom recommendations
-    st.markdown("### 🔎 Explore Recommendations by Country")
-    selected_country = st.selectbox("Select a country", df["Country"].unique())
-    country_data = severe_df[severe_df["Country"] == selected_country]
-
-    if not country_data.empty:
-        perc = country_data["percentage"].values[0]
-        st.write(f"{selected_country}: {perc:.1%} severely food insecure households.")
-    else:
-        st.write(f"{selected_country}: No households classified as severely food insecure.")
 
 # ==========================
 # 2. MODEL PERFORMANCE
