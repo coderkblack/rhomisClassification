@@ -53,7 +53,7 @@ st.markdown("Predict **household food security status** using RHOMIS indicators.
 # ==========================
 # SIDEBAR NAVIGATION
 # ==========================
-menu = st.sidebar.radio("📌 Navigation", ["Dataset Overview", "Model Performance", "Feature Importance", "Prediction Tool", "Recommendations"])
+menu = st.sidebar.radio("📌 Navigation", ["Dataset Overview", "Model Performance", "Feature Importance", "Prediction Tool"])
 
 df = load_data()
 models = load_models()
@@ -136,6 +136,25 @@ if menu == "Dataset Overview":
         }
     )
     st.plotly_chart(fig, use_container_width=True)
+    
+    # 🍽️ Months Food Insecure Distribution
+    st.markdown("### 🍽️ Months Food Insecure Distribution")
+    fig = px.violin(
+        df,
+        x="HFIAS_status",
+        y="NrofMonthsFoodInsecure",
+        color="HFIAS_status",
+        box=True,
+        points="all",
+        title="Distribution of Food Insecurity Months by Status",
+        color_discrete_map={
+            "FoodSecure": "#2E8B57",
+            "MildlyFI": "#FFD700",
+            "ModeratelyFI": "#FF8C00",
+            "SeverelyFI": "#DC143C"
+        }
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
     # 🗓️ Seasonal Food Security - Worst & Best Months
     st.markdown("### 🗓️ Seasonal Food Security")
@@ -161,16 +180,26 @@ if menu == "Dataset Overview":
     )
     st.plotly_chart(fig, use_container_width=True)
     
-    # 🍽️ Months Food Insecure Distribution
-    st.markdown("### 🍽️ Months Food Insecure Distribution")
-    fig = px.violin(
-        df,
-        x="HFIAS_status",
-        y="NrofMonthsFoodInsecure",
+    # 🗓️ Food Security Status by Year
+    st.markdown("### 🗓️ Food Security Status by Year")
+
+    # Aggregate data to get counts of each HFIAS_status by year
+    year_status_counts = df.groupby(['YEAR', 'HFIAS_status']).size().reset_index(name='count')
+
+    # Normalize counts to get percentages within each year
+    year_totals = df.groupby('YEAR').size().reset_index(name='total')
+    year_status_counts = year_status_counts.merge(year_totals, on='YEAR')
+    year_status_counts['percentage'] = year_status_counts['count'] / year_status_counts['total']
+
+    # Create the stacked bar chart
+    fig = px.bar(
+        year_status_counts,
+        x="YEAR",
+        y="percentage",
         color="HFIAS_status",
-        box=True,
-        points="all",
-        title="Distribution of Food Insecurity Months by Status",
+        title="Food Security Distribution by Year",
+        labels={"percentage": "Percentage", "YEAR": "Year"},
+        barmode="stack",
         color_discrete_map={
             "FoodSecure": "#2E8B57",
             "MildlyFI": "#FFD700",
@@ -178,8 +207,9 @@ if menu == "Dataset Overview":
             "SeverelyFI": "#DC143C"
         }
     )
+    fig.update_layout(yaxis=dict(tickformat=".0%"))
     st.plotly_chart(fig, use_container_width=True)
-
+    
     # 🐄 Livestock by country & security
     st.markdown("### 🐄 Livestock Holdings by Country and Food Security")
     livestock_stats = df.groupby(["Country", "HFIAS_status"])["LivestockHoldings"].mean().reset_index()
