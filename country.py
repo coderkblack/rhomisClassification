@@ -25,7 +25,7 @@ st.set_page_config(
 @st.cache_data
 def load_data():
     # Update path if necessary
-    file_path = "/home/jakes/Documents/strathmore/Modules/Module 1/dataMining/project/Rhomis/final/RHoMIS_Indicators.csv"
+    file_path = "RHoMIS_Indicators.csv"
     try:
         df = pd.read_csv(file_path, encoding='latin1')
     except FileNotFoundError:
