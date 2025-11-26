@@ -16,7 +16,7 @@ st.set_page_config(page_title="RHOMIS Food Security Prediction 🚜", layout="wi
 # ==========================
 @st.cache_data
 def load_data():
-    df = pd.read_csv("/RHoMIS_Indicators.csv", encoding="latin1")  # 👈 adjust path
+    df = pd.read_csv("RHoMIS_Indicators.csv", encoding="latin1")  # 👈 adjust path
     return df
 
 # @st.cache_resource
